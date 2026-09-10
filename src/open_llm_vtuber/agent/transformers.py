@@ -100,9 +100,13 @@ def actions_extractor(live2d_model: Live2dModel):
     return decorator
 
 
-def display_processor():
+def display_processor(live2d_model: Live2dModel | None = None):
     """
     Decorator that processes text for display, passing through dicts.
+
+    Args:
+        live2d_model: Optional Live2D model used to strip expression keywords
+            such as ``[joy]`` from on-screen text.
     """
 
     def decorator(
@@ -141,6 +145,9 @@ def display_processor():
 
                     if sentence.is_paragraph_start:
                         text = "\n\n" + text
+
+                    if live2d_model:
+                        text = live2d_model.remove_emotion_keywords(text)
 
                     display = DisplayText(text=text)
                     yield sentence, display, actions  # Yield the tuple

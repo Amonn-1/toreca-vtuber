@@ -26,6 +26,7 @@ from .conversations.conversation_handler import (
     handle_conversation_trigger,
     handle_group_interrupt,
     handle_individual_interrupt,
+    handle_welcome_greeting,
 )
 
 
@@ -122,6 +123,7 @@ class WebSocketHandler:
             await self._send_initial_messages(
                 websocket, client_uid, session_service_context
             )
+            asyncio.create_task(self._play_welcome_greeting(websocket, client_uid))
 
             logger.info(f"Connection established for client {client_uid}")
 
@@ -174,6 +176,39 @@ class WebSocketHandler:
 
         # Start microphone
         await websocket.send_text(json.dumps({"type": "control", "text": "start-mic"}))
+
+    async def _play_welcome_greeting(
+        self, websocket: WebSocket, client_uid: str
+    ) -> None:
+        """Delay briefly so Live2D can load, then play the opening greeting.
+
+        Args:
+            websocket: Client WebSocket connection.
+            client_uid: Unique identifier for the client.
+        """
+        await asyncio.sleep(1.8)
+        if client_uid not in self.client_connections:
+            return
+
+        existing = self.current_conversation_tasks.get(client_uid)
+        if existing and not existing.done():
+            logger.info(
+                f"Skipping welcome greeting for {client_uid}; conversation already active"
+            )
+            return
+
+        task = asyncio.create_task(
+            handle_welcome_greeting(
+                context=self.client_contexts[client_uid],
+                websocket=websocket,
+                client_uid=client_uid,
+            )
+        )
+        self.current_conversation_tasks[client_uid] = task
+        try:
+            await task
+        except asyncio.CancelledError:
+            logger.info(f"Welcome greeting cancelled for client {client_uid}")
 
     async def _init_service_context(
         self, send_text: Callable, client_uid: str

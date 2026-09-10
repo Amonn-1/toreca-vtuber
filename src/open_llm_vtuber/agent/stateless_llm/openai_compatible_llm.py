@@ -39,6 +39,7 @@ class AsyncLLM(StatelessLLMInterface):
         organization_id: str = "z",
         project_id: str = "z",
         temperature: float = 1.0,
+        extra_body: dict[str, Any] | None = None,
     ):
         """
         Initializes an instance of the `AsyncLLM` class.
@@ -50,33 +51,44 @@ class AsyncLLM(StatelessLLMInterface):
         - project_id (str, optional): The project ID for the OpenAI API. Defaults to "z".
         - llm_api_key (str, optional): The API key for the OpenAI API. Defaults to "z".
         - temperature (float, optional): What sampling temperature to use, between 0 and 2. Defaults to 1.0.
+        - extra_body (dict[str, Any] | None): Extra JSON fields merged into the request
+            body, such as DeepSeek thinking controls. Defaults to None.
         """
         self.base_url = base_url
         self.model = model
         self.temperature = temperature
+        self.extra_body = extra_body or {}
+        is_local = "localhost" in base_url or "127.0.0.1" in base_url
 
-        # Disable proxy for localhost connections to avoid 503 errors with local LLM services
-        if "localhost" in base_url or "127.0.0.1" in base_url:
+        if is_local:
+            # Disable proxy for localhost connections to avoid 503 errors with local LLM services
             os.environ["NO_PROXY"] = "localhost,127.0.0.1"
 
-        # Disable SSL verification for localhost HTTPS connections (dev certificates)
-        skip_ssl_verify = base_url.startswith("https://") and ("localhost" in base_url or "127.0.0.1" in base_url)
+            # Disable SSL verification for localhost HTTPS connections (dev certificates)
+            skip_ssl_verify = base_url.startswith("https://")
 
-        http_client = httpx.AsyncClient(
-            transport=_StripAuthTransport(verify=not skip_ssl_verify),
-            trust_env=False,
-        )
+            http_client = httpx.AsyncClient(
+                transport=_StripAuthTransport(verify=not skip_ssl_verify),
+                trust_env=False,
+            )
 
-        self.client = AsyncOpenAI(
-            base_url=base_url,
-            organization=organization_id,
-            project=project_id,
-            api_key="not-needed",
-            http_client=http_client,
-            default_headers={
-                "X-Internal-Token": llm_api_key,
-            },
-        )
+            self.client = AsyncOpenAI(
+                base_url=base_url,
+                organization=organization_id,
+                project=project_id,
+                api_key="not-needed",
+                http_client=http_client,
+                default_headers={
+                    "X-Internal-Token": llm_api_key,
+                },
+            )
+        else:
+            self.client = AsyncOpenAI(
+                base_url=base_url,
+                organization=organization_id,
+                project=project_id,
+                api_key=llm_api_key,
+            )
         self.support_tools = True
 
         logger.info(
@@ -123,15 +135,19 @@ class AsyncLLM(StatelessLLMInterface):
 
             available_tools = tools if self.support_tools else NOT_GIVEN
 
+            create_kwargs: dict[str, Any] = {
+                "messages": messages_with_system,
+                "model": self.model,
+                "stream": True,
+                "temperature": self.temperature,
+                "tools": available_tools,
+            }
+            if self.extra_body:
+                create_kwargs["extra_body"] = self.extra_body
+
             stream: AsyncStream[
                 ChatCompletionChunk
-            ] = await self.client.chat.completions.create(
-                messages=messages_with_system,
-                model=self.model,
-                stream=True,
-                temperature=self.temperature,
-                tools=available_tools,
-            )
+            ] = await self.client.chat.completions.create(**create_kwargs)
             logger.debug(
                 f"Tool Support: {self.support_tools}, Available tools: {available_tools}"
             )

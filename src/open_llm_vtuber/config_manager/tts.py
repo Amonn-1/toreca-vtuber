@@ -417,11 +417,11 @@ class SiliconFlowTTSConfig(I18nMixin):
     default_voice: str = Field(
         "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom", alias="default_voice"
     )
-    sample_rate: int = Field(32000, alias="sample_rate")
+    sample_rate: int | None = Field(None, alias="sample_rate")
     response_format: str = Field("mp3", alias="response_format")
-    stream: bool = Field(True, alias="stream")
-    speed: float = Field(1, alias="speed")
-    gain: int = Field(0, alias="gain")
+    stream: bool | None = Field(None, alias="stream")
+    speed: float | None = Field(None, alias="speed")
+    gain: int | None = Field(None, alias="gain")
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
         "api_key": Description(

@@ -171,7 +171,7 @@ character_config:
 
   # === 自动语音识别 ===
   asr_config:
-    # 语音转文本模型选项：'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr'
+    # 语音转文本模型选项：'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr', 'siliconflow_asr'
     asr_model: 'sherpa_onnx_asr' # 使用的语音识别模型
 
     azure_asr:
@@ -267,6 +267,11 @@ character_config:
       model: 'whisper-large-v3-turbo' # 或者 'whisper-large-v3'
       lang: '' # 留空表示自动
 
+    siliconflow_asr:
+      api_url: 'https://api.siliconflow.cn/v1/audio/transcriptions'
+      api_key: 'your key'
+      model: 'FunAudioLLM/SenseVoiceSmall'
+
   # =================== 文本转语音 ===================
   tts_config:
     tts_model: 'edge_tts' # 使用的文本转语音模型
@@ -280,7 +285,7 @@ character_config:
       api_url: "https://api.siliconflow.cn/v1/audio/speech"
       api_key: "your key"  # 用于身份验证的API密钥
       default_model: "FunAudioLLM/CosyVoice2-0.5B"  # 默认使用的文本转语音模型
-      default_voice: "speech:Dreamflowers:5bdstvc39i:xkqldnpasqmoqbakubom your voice name"  # 默认语音配置，格式为："speech:模型名称:音色ID:您的语音名称"
+      default_voice: "FunAudioLLM/CosyVoice2-0.5B:claire"  # 系统女声 claire；也可用 anna/bella/diana
       sample_rate: 32000  # 音频采样率（单位：Hz），不同格式支持的采样率不同：opus支持48000Hz；wav/pcm支持8000、16000、24000、32000、44100Hz（默认44100Hz）；mp3支持32000、44100Hz（默认44100Hz）
       response_format: "mp3"  # 输出音频格式，支持mp3、opus、wav、pcm
       stream: true

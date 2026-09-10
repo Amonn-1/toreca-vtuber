@@ -335,9 +335,11 @@ class ServiceContext:
     def init_tts(self, tts_config: TTSConfig) -> None:
         if not self.tts_engine or (self.character_config.tts_config != tts_config):
             logger.info(f"Initializing TTS: {tts_config.tts_model}")
+            engine_config = getattr(tts_config, tts_config.tts_model.lower(), None)
+            tts_kwargs = engine_config.model_dump() if engine_config is not None else {}
             self.tts_engine = TTSFactory.get_tts_engine(
                 tts_config.tts_model,
-                **getattr(tts_config, tts_config.tts_model.lower()).model_dump(),
+                **tts_kwargs,
             )
             # saving config should be done after successful initialization
             self.character_config.tts_config = tts_config

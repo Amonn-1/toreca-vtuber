@@ -32,6 +32,10 @@ class LLMFactory:
             or llm_provider == "mistral_llm"
             or llm_provider == "lmstudio_llm"
         ):
+            extra_body = kwargs.get("extra_body")
+            # DeepSeek V4 thinking is on by default and delays the first speakable token.
+            if llm_provider == "deepseek_llm" and extra_body is None:
+                extra_body = {"thinking": {"type": "disabled"}}
             return OpenAICompatibleLLM(
                 model=kwargs.get("model"),
                 base_url=kwargs.get("base_url"),
@@ -39,6 +43,7 @@ class LLMFactory:
                 organization_id=kwargs.get("organization_id"),
                 project_id=kwargs.get("project_id"),
                 temperature=kwargs.get("temperature"),
+                extra_body=extra_body,
             )
         if llm_provider == "stateless_llm_with_template":
             return StatelessLLMWithTemplate(

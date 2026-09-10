@@ -11,9 +11,21 @@ from ..chat_history_manager import store_message
 from ..service_context import ServiceContext
 from .group_conversation import process_group_conversation
 from .single_conversation import process_single_conversation
-from .conversation_utils import EMOJI_LIST
+from .conversation_utils import (
+    EMOJI_LIST,
+    cleanup_conversation,
+    finalize_conversation_turn,
+    process_agent_output,
+)
+from .tts_manager import TTSTaskManager
 from .types import GroupConversationState
+from ..agent.output_types import Actions, DisplayText, SentenceOutput
 from prompts import prompt_loader
+
+WELCOME_GREETING_JA = (
+    "こんにちは。シャニートレカのAIアシスタントです。"
+    "わからないことがあれば、なんでも聞いてください。"
+)
 
 
 async def handle_conversation_trigger(
@@ -211,3 +223,62 @@ async def handle_group_interrupt(
             "text": "conversation-interrupted",
         },
     )
+
+
+async def handle_welcome_greeting(
+    context: ServiceContext,
+    websocket: WebSocket,
+    client_uid: str,
+) -> None:
+    """Play a fixed Japanese greeting when a client first opens the page.
+
+    Args:
+        context: Service context for the connected client.
+        websocket: Client WebSocket connection.
+        client_uid: Unique identifier for the client.
+    """
+    tts_manager = TTSTaskManager()
+    try:
+        await websocket.send_text(
+            json.dumps({"type": "control", "text": "conversation-chain-start"})
+        )
+
+        expressions = context.live2d_model.extract_emotion("[joy]")
+        output = SentenceOutput(
+            display_text=DisplayText(text=WELCOME_GREETING_JA),
+            tts_text=WELCOME_GREETING_JA,
+            actions=Actions(expressions=expressions or None),
+        )
+        await process_agent_output(
+            output=output,
+            character_config=context.character_config,
+            live2d_model=context.live2d_model,
+            tts_engine=context.tts_engine,
+            websocket_send=websocket.send_text,
+            tts_manager=tts_manager,
+            translate_engine=context.translate_engine,
+        )
+
+        if tts_manager.task_list:
+            await asyncio.gather(*tts_manager.task_list)
+            await websocket.send_text(json.dumps({"type": "backend-synth-complete"}))
+
+        await finalize_conversation_turn(
+            tts_manager=tts_manager,
+            websocket_send=websocket.send_text,
+            client_uid=client_uid,
+        )
+        logger.info(f"Welcome greeting sent to client {client_uid}")
+    except asyncio.CancelledError:
+        logger.info(f"Welcome greeting cancelled for client {client_uid}")
+        raise
+    except Exception as e:
+        logger.error(f"Failed to send welcome greeting to {client_uid}: {e}")
+        try:
+            await websocket.send_text(
+                json.dumps({"type": "control", "text": "conversation-chain-end"})
+            )
+        except Exception:
+            pass
+    finally:
+        cleanup_conversation(tts_manager, "welcome")

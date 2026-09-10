@@ -172,7 +172,7 @@ character_config:
 
   # === Automatic Speech Recognition ===
   asr_config:
-    # speech to text model options: 'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr'
+    # speech to text model options: 'faster_whisper', 'whisper_cpp', 'whisper', 'azure_asr', 'fun_asr', 'groq_whisper_asr', 'sherpa_onnx_asr', 'siliconflow_asr'
     asr_model: 'sherpa_onnx_asr'
 
     azure_asr:
@@ -269,6 +269,11 @@ character_config:
       api_key: ''
       model: 'whisper-large-v3-turbo' # or 'whisper-large-v3'
       lang: '' # put nothing and it will be auto
+
+    siliconflow_asr:
+      api_url: 'https://api.siliconflow.cn/v1/audio/transcriptions'
+      api_key: 'your key'
+      model: 'FunAudioLLM/SenseVoiceSmall'
 
   # =================== Text to Speech ===================
   tts_config:
