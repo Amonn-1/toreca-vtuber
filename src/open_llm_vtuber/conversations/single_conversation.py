@@ -11,6 +11,7 @@ from .conversation_utils import (
     process_user_input,
     finalize_conversation_turn,
     cleanup_conversation,
+    safe_websocket_send,
     EMOJI_LIST,
 )
 from .types import WebSocketSend
@@ -98,7 +99,9 @@ async def process_single_conversation(
                     output_item["name"] = context.character_config.character_name
                     logger.debug(f"Sending tool status update: {output_item}")
 
-                    await websocket_send(json.dumps(output_item))
+                    await safe_websocket_send(
+                        websocket_send, json.dumps(output_item)
+                    )
 
                 elif isinstance(output_item, (SentenceOutput, AudioOutput)):
                     # Handle SentenceOutput or AudioOutput
@@ -126,13 +129,14 @@ async def process_single_conversation(
             logger.exception(
                 f"Error processing agent response stream: {e}"
             )  # Log with stack trace
-            await websocket_send(
+            await safe_websocket_send(
+                websocket_send,
                 json.dumps(
                     {
                         "type": "error",
                         "message": f"Error processing agent response: {str(e)}",
                     }
-                )
+                ),
             )
             # full_response will contain partial response before error
         # --- End processing agent response ---
@@ -140,7 +144,9 @@ async def process_single_conversation(
         # Wait for any pending TTS tasks
         if tts_manager.task_list:
             await asyncio.gather(*tts_manager.task_list)
-            await websocket_send(json.dumps({"type": "backend-synth-complete"}))
+            await safe_websocket_send(
+                websocket_send, json.dumps({"type": "backend-synth-complete"})
+            )
 
         await finalize_conversation_turn(
             tts_manager=tts_manager,
@@ -165,9 +171,10 @@ async def process_single_conversation(
         logger.info(f"🤡👍 Conversation {session_emoji} cancelled because interrupted.")
         raise
     except Exception as e:
-        logger.error(f"Error in conversation chain: {e}")
-        await websocket_send(
-            json.dumps({"type": "error", "message": f"Conversation error: {str(e)}"})
+        logger.exception(f"Error in conversation chain: {e}")
+        await safe_websocket_send(
+            websocket_send,
+            json.dumps({"type": "error", "message": f"Conversation error: {str(e)}"}),
         )
         raise
     finally:

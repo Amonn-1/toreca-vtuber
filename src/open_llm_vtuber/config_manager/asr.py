@@ -307,6 +307,29 @@ class SherpaOnnxASRConfig(I18nMixin):
         return values
 
 
+class SiliconFlowASRConfig(I18nMixin):
+    """Configuration for SiliconFlow ASR."""
+
+    api_key: str = Field(..., alias="api_key")
+    api_url: str = Field(
+        "https://api.siliconflow.cn/v1/audio/transcriptions", alias="api_url"
+    )
+    model: str = Field("FunAudioLLM/SenseVoiceSmall", alias="model")
+
+    DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
+        "api_key": Description(
+            en="API key for SiliconFlow ASR service", zh="SiliconFlow ASR 服务的 API 密钥"
+        ),
+        "api_url": Description(
+            en="API endpoint URL for SiliconFlow ASR", zh="SiliconFlow ASR 的 API 端点地址"
+        ),
+        "model": Description(
+            en="Model name to use (e.g., FunAudioLLM/SenseVoiceSmall)",
+            zh="要使用的模型名称（如 FunAudioLLM/SenseVoiceSmall）",
+        ),
+    }
+
+
 class ASRConfig(I18nMixin):
     """Configuration for Automatic Speech Recognition."""
 
@@ -318,6 +341,7 @@ class ASRConfig(I18nMixin):
         "fun_asr",
         "groq_whisper_asr",
         "sherpa_onnx_asr",
+        "siliconflow_asr",
     ] = Field(..., alias="asr_model")
     azure_asr: Optional[AzureASRConfig] = Field(None, alias="azure_asr")
     faster_whisper: Optional[FasterWhisperConfig] = Field(None, alias="faster_whisper")
@@ -329,6 +353,9 @@ class ASRConfig(I18nMixin):
     )
     sherpa_onnx_asr: Optional[SherpaOnnxASRConfig] = Field(
         None, alias="sherpa_onnx_asr"
+    )
+    siliconflow_asr: Optional[SiliconFlowASRConfig] = Field(
+        None, alias="siliconflow_asr"
     )
 
     DESCRIPTIONS: ClassVar[Dict[str, Description]] = {
@@ -349,6 +376,9 @@ class ASRConfig(I18nMixin):
         ),
         "sherpa_onnx_asr": Description(
             en="Configuration for Sherpa Onnx ASR", zh="Sherpa Onnx ASR 配置"
+        ),
+        "siliconflow_asr": Description(
+            en="Configuration for SiliconFlow ASR", zh="SiliconFlow ASR 配置"
         ),
     }
 

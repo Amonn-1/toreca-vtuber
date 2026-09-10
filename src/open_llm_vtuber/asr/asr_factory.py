@@ -58,5 +58,13 @@ class ASRFactory:
             from .sherpa_onnx_asr import VoiceRecognition as SherpaOnnxASR
 
             return SherpaOnnxASR(**kwargs)
+        elif system_name == "siliconflow_asr":
+            from .siliconflow_asr import VoiceRecognition as SiliconFlowASR
+
+            return SiliconFlowASR(
+                api_key=kwargs.get("api_key"),
+                api_url=kwargs.get("api_url"),
+                model=kwargs.get("model"),
+            )
         else:
             raise ValueError(f"Unknown ASR system: {system_name}")

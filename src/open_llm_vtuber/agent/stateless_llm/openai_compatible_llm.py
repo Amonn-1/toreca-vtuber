@@ -3,6 +3,7 @@ This class is responsible for handling asynchronous interaction with OpenAI API 
 endpoints for language generation.
 """
 
+import os
 from typing import AsyncIterator, List, Dict, Any
 from openai import (
     AsyncStream,
@@ -45,6 +46,11 @@ class AsyncLLM(StatelessLLMInterface):
         self.base_url = base_url
         self.model = model
         self.temperature = temperature
+
+        # Disable proxy for localhost connections to avoid 503 errors with local LLM services
+        if "localhost" in base_url or "127.0.0.1" in base_url:
+            os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+
         self.client = AsyncOpenAI(
             base_url=base_url,
             organization=organization_id,

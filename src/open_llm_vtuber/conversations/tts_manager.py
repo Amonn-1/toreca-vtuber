@@ -10,7 +10,7 @@ from ..agent.output_types import DisplayText, Actions
 from ..live2d_model import Live2dModel
 from ..tts.tts_interface import TTSInterface
 from ..utils.stream_audio import prepare_audio_payload
-from .types import WebSocketSend
+from .types import WebSocketSend, safe_websocket_send
 
 
 class TTSTaskManager:
@@ -105,7 +105,13 @@ class TTSTaskManager:
                 # Send payloads in order
                 while self._next_sequence_to_send in buffered_payloads:
                     next_payload = buffered_payloads.pop(self._next_sequence_to_send)
-                    await websocket_send(json.dumps(next_payload))
+                    if not await safe_websocket_send(
+                        websocket_send, json.dumps(next_payload)
+                    ):
+                        logger.debug(
+                            "WebSocket closed during payload delivery, stopping sender."
+                        )
+                        return
                     self._next_sequence_to_send += 1
 
                 self._payload_queue.task_done()

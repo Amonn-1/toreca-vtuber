@@ -6,7 +6,7 @@ import json
 from loguru import logger
 
 from ..message_handler import message_handler
-from .types import WebSocketSend, BroadcastContext
+from .types import WebSocketSend, BroadcastContext, safe_websocket_send
 from .tts_manager import TTSTaskManager
 from ..agent.output_types import SentenceOutput, AudioOutput
 from ..agent.input_types import BatchInput, TextData, ImageData, TextSource, ImageSource
@@ -72,10 +72,11 @@ async def process_agent_output(
             logger.warning(f"Unknown output type: {type(output)}")
     except Exception as e:
         logger.error(f"Error processing agent output: {e}")
-        await websocket_send(
+        await safe_websocket_send(
+            websocket_send,
             json.dumps(
                 {"type": "error", "message": f"Error processing response: {str(e)}"}
-            )
+            ),
         )
 
     return full_response
@@ -126,21 +127,24 @@ async def handle_audio_output(
             display_text=display_text,
             actions=actions.to_dict() if actions else None,
         )
-        await websocket_send(json.dumps(audio_payload))
+        await safe_websocket_send(websocket_send, json.dumps(audio_payload))
     return full_response
 
 
 async def send_conversation_start_signals(websocket_send: WebSocketSend) -> None:
     """Send initial conversation signals"""
-    await websocket_send(
+    await safe_websocket_send(
+        websocket_send,
         json.dumps(
             {
                 "type": "control",
                 "text": "conversation-chain-start",
             }
-        )
+        ),
     )
-    await websocket_send(json.dumps({"type": "full-text", "text": "Thinking..."}))
+    await safe_websocket_send(
+        websocket_send, json.dumps({"type": "full-text", "text": "Thinking..."})
+    )
 
 
 async def process_user_input(
@@ -152,8 +156,9 @@ async def process_user_input(
     if isinstance(user_input, np.ndarray):
         logger.info("Transcribing audio input...")
         input_text = await asr_engine.async_transcribe_np(user_input)
-        await websocket_send(
-            json.dumps({"type": "user-input-transcription", "text": input_text})
+        await safe_websocket_send(
+            websocket_send,
+            json.dumps({"type": "user-input-transcription", "text": input_text}),
         )
         return input_text
     return user_input
@@ -168,7 +173,9 @@ async def finalize_conversation_turn(
     """Finalize a conversation turn"""
     if tts_manager.task_list:
         await asyncio.gather(*tts_manager.task_list)
-        await websocket_send(json.dumps({"type": "backend-synth-complete"}))
+        await safe_websocket_send(
+            websocket_send, json.dumps({"type": "backend-synth-complete"})
+        )
 
         response = await message_handler.wait_for_response(
             client_uid, "frontend-playback-complete"
@@ -178,7 +185,7 @@ async def finalize_conversation_turn(
             logger.warning(f"No playback completion response from {client_uid}")
             return
 
-    await websocket_send(json.dumps({"type": "force-new-message"}))
+    await safe_websocket_send(websocket_send, json.dumps({"type": "force-new-message"}))
 
     if broadcast_ctx and broadcast_ctx.broadcast_func:
         await broadcast_ctx.broadcast_func(
@@ -201,7 +208,7 @@ async def send_conversation_end_signal(
         "text": "conversation-chain-end",
     }
 
-    await websocket_send(json.dumps(chain_end_msg))
+    await safe_websocket_send(websocket_send, json.dumps(chain_end_msg))
 
     if broadcast_ctx and broadcast_ctx.broadcast_func and broadcast_ctx.group_members:
         await broadcast_ctx.broadcast_func(
