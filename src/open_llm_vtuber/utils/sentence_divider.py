@@ -296,6 +296,7 @@ class SentenceWithTags:
 
     text: str
     tags: List[TagInfo]  # List of tags from outermost to innermost
+    is_paragraph_start: bool = False  # True if this sentence starts a new paragraph
 
 
 class SentenceDivider:
@@ -320,6 +321,7 @@ class SentenceDivider:
         self._buffer = ""
         # Replace active_tags dict with a stack to handle nesting
         self._tag_stack = []
+        self._is_paragraph_start = False
 
     def _get_current_tags(self) -> List[TagInfo]:
         """
@@ -338,6 +340,23 @@ class SentenceDivider:
             TagInfo if there's an active tag, None otherwise
         """
         return self._tag_stack[-1] if self._tag_stack else None
+
+    def _check_paragraph_break(self, text: str) -> Tuple[bool, str, str]:
+        """
+        Check if text contains a paragraph break (double newline).
+
+        Returns:
+            Tuple of (has_paragraph_break, text_before_break, text_after_break)
+        """
+        if "\n\n" in text:
+            parts = text.split("\n\n", 1)
+            return True, parts[0], parts[1] if len(parts) > 1 else ""
+        elif "\n" in text:
+            normalized = re.sub(r'\n\s*\n', '\n\n', text)
+            if "\n\n" in normalized:
+                parts = normalized.split("\n\n", 1)
+                return True, parts[0], parts[1] if len(parts) > 1 else ""
+        return False, text, ""
 
     def _extract_tag(self, text: str) -> Tuple[Optional[TagInfo], str]:
         """
@@ -409,12 +428,37 @@ class SentenceDivider:
         It consumes processed parts from self._buffer.
         """
         processed_something = True  # Flag to loop until no more processing can be done
+
         while processed_something:
             processed_something = False
             original_buffer_len = len(self._buffer)
 
             if not self._buffer.strip():
                 break
+
+            # Check for paragraph break in buffer
+            has_break, text_before, text_after = self._check_paragraph_break(self._buffer)
+            if has_break:
+                # Yield any text before the paragraph break as sentences
+                if text_before.strip():
+                    current_tags = self._get_current_tags()
+                    sentences, remaining = self._segment_text(text_before)
+                    for sentence in sentences:
+                        if sentence.strip():
+                            yield SentenceWithTags(
+                                text=sentence.strip(),
+                                tags=current_tags or [TagInfo("", TagState.NONE)],
+                            )
+                    if remaining.strip():
+                        yield SentenceWithTags(
+                            text=remaining.strip(),
+                            tags=current_tags or [TagInfo("", TagState.NONE)],
+                        )
+                # Set flag for next sentence and continue with text after break
+                self._is_paragraph_start = True
+                self._buffer = text_after
+                processed_something = True
+                continue
 
             # Find the next tag position
             next_tag_pos = len(self._buffer)
@@ -435,7 +479,8 @@ class SentenceDivider:
                         : len(self._buffer) - len(remaining)
                     ].strip()
                     # Yield the tag itself, represented as a SentenceWithTags
-                    yield SentenceWithTags(text=processed_text, tags=[tag_info])
+                    yield SentenceWithTags(text=processed_text, tags=[tag_info], is_paragraph_start=self._is_paragraph_start)
+                    self._is_paragraph_start = False  # Reset after yielding
                     self._buffer = remaining
                     processed_something = True
                     continue  # Restart processing loop for the remaining buffer
@@ -449,12 +494,16 @@ class SentenceDivider:
                 # Process complete sentences in text before tag
                 if contains_end_punctuation(text_before_tag):
                     sentences, remaining_before = self._segment_text(text_before_tag)
-                    for sentence in sentences:
+                    for i, sentence in enumerate(sentences):
                         if sentence.strip():
+                            # First sentence after paragraph break gets the flag
                             yield SentenceWithTags(
                                 text=sentence.strip(),
                                 tags=current_tags or [TagInfo("", TagState.NONE)],
+                                is_paragraph_start=self._is_paragraph_start and i == 0,
                             )
+                            if i == 0:
+                                self._is_paragraph_start = False  # Reset after first sentence
                     # The part consumed includes sentences + what's left before the tag
                     processed_segment = text_before_tag
                     self._buffer = self._buffer[len(processed_segment) :]
@@ -467,7 +516,9 @@ class SentenceDivider:
                     yield SentenceWithTags(
                         text=text_before_tag.strip(),
                         tags=current_tags or [TagInfo("", TagState.NONE)],
+                        is_paragraph_start=self._is_paragraph_start,
                     )
+                    self._is_paragraph_start = False  # Reset after yielding
                     self._buffer = self._buffer[len(text_before_tag) :]
                     processed_something = True
                     continue  # Restart processing loop
@@ -500,7 +551,9 @@ class SentenceDivider:
                         yield SentenceWithTags(
                             text=sentence.strip(),
                             tags=current_tags or [TagInfo("", TagState.NONE)],
+                            is_paragraph_start=self._is_paragraph_start,
                         )
+                        self._is_paragraph_start = False
                         self._buffer = remaining
                         self._is_first_sentence = False
                         processed_something = True
@@ -513,12 +566,15 @@ class SentenceDivider:
                         self._buffer = remaining
                         self._is_first_sentence = False
                         processed_something = True
-                        for sentence in sentences:
+                        for i, sentence in enumerate(sentences):
                             if sentence.strip():
                                 yield SentenceWithTags(
                                     text=sentence.strip(),
                                     tags=current_tags or [TagInfo("", TagState.NONE)],
+                                    is_paragraph_start=self._is_paragraph_start and i == 0,
                                 )
+                                if i == 0:
+                                    self._is_paragraph_start = False
                         continue  # Restart processing loop
 
             # If we reached here without processing anything, break the loop
@@ -606,3 +662,4 @@ class SentenceDivider:
         self._is_first_sentence = True
         self._buffer = ""
         self._tag_stack = []
+        self._is_paragraph_start = False

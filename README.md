@@ -1,158 +1,246 @@
-![](./assets/banner.jpg)
+# toreca-vtuber 使用手册
 
-<h1 align="center">Open-LLM-VTuber</h1>
-<h3 align="center">
+本手册基于本项目实际部署环境编写，涵盖从拉取代码到启动运行的完整流程，以及 GPT-SoVITS 本地语音合成的配置。
 
-[![GitHub release](https://img.shields.io/github/v/release/Open-LLM-VTuber/Open-LLM-VTuber)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/releases) 
-[![license](https://img.shields.io/github/license/Open-LLM-VTuber/Open-LLM-VTuber)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/blob/master/LICENSE) 
-[![CodeQL](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/codeql.yml/badge.svg)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/codeql.yml)
-[![Ruff](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/ruff.yml/badge.svg)](https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/actions/workflows/ruff.yml)
-[![Docker](https://img.shields.io/badge/Open-LLM-VTuber%2FOpen--LLM--VTuber-%25230db7ed.svg?logo=docker&logoColor=blue&labelColor=white&color=blue)](https://hub.docker.com/r/Open-LLM-VTuber/open-llm-vtuber) 
-[![QQ User Group](https://img.shields.io/badge/QQ_User_Group-792615362-white?style=flat&logo=qq&logoColor=white)](https://qm.qq.com/q/ngvNUQpuKI)
-[![Static Badge](https://img.shields.io/badge/Join%20Chat-Zulip?style=flat&logo=zulip&label=Zulip(dev-community)&color=blue&link=https%3A%2F%2Folv.zulipchat.com)](https://olv.zulipchat.com)
+---
 
-> **📢 v2.0 Development**: We are focusing on Open-LLM-VTuber v2.0 — a complete rewrite of the codebase. v2.0 is currently in its early discussion and planning phase. We kindly ask you to refrain from opening new issues or pull requests for feature requests on v1. To participate in the v2 discussions or contribute, join our developer community on [Zulip](https://olv.zulipchat.com). Weekly meeting schedules will be announced on Zulip. We will continue fixing bugs for v1 and work through existing pull requests.
+## 一、环境要求
 
-[![BuyMeACoffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/yi.ting)
-[![](https://dcbadge.limes.pink/api/server/3UDA8YFDXx)](https://discord.gg/3UDA8YFDXx)
+| 组件 | 版本 / 说明 |
+|---|---|
+| Python | 3.10 ~ 3.12（本项目 `.python-version` 为 3.12） |
+| 包管理 | 推荐 `uv`，也可用 `pip` |
+| 操作系统 | Windows / Linux / macOS |
+| Git | 任意较新版本 |
+| FFmpeg | 系统需可用（音频处理） |
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Open-LLM-VTuber/Open-LLM-VTuber)
+---
 
-ENGLISH README | [中文 README](./README.CN.md) | [한국어 README](./README.KR.md) | [日本語 README](./README.JP.md)
+## 二、部署 Open-LLM-VTuber
 
-[Documentation](https://open-llm-vtuber.github.io/docs/quick-start) | [![Roadmap](https://img.shields.io/badge/Roadmap-GitHub_Project-yellow)](https://github.com/orgs/Open-LLM-VTuber/projects/2)
+### 1. 克隆仓库
 
-<a href="https://trendshift.io/repositories/27063" target="_blank"><img src="https://trendshift.io/api/badge/repositories/27063" alt="Open-LLM-VTuber%2FOpen-LLM-VTuber | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+```bash
+git clone https://github.com/Amonn-1/toreca-vtuber.git
+cd toreca-vtuber
+```
 
-</h3>
+### 2. 安装依赖
 
+使用 uv（推荐）：
 
-> 常见问题 Common Issues doc (Written in Chinese): https://docs.qq.com/pdf/DTFZGQXdTUXhIYWRq
->
-> User Survey: https://forms.gle/w6Y6PiHTZr1nzbtWA
->
-> 调查问卷(中文): https://wj.qq.com/s2/16150415/f50a/
+```bash
+uv sync
+```
 
+或使用 pip：
 
+```bash
+pip install -r requirements.txt
+```
 
-> :warning: This project is in its early stages and is currently under **active development**.
+### 3. 准备配置文件
 
-> :warning: If you want to run the server remotely and access it on a different machine, such as running the server on your computer and access it on your phone, you will need to configure `https`, because the microphone on the front end will only launch in a secure context (a.k.a. https or localhost). See [MDN Web Doc](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia). Therefore, you should configure https with a reverse proxy to access the page on a remote machine (non-localhost).
+项目根目录的 `conf.yaml` 是主配置（该文件被 `.gitignore` 忽略，不会提交）。
+若没有，从模板复制：
 
+```bash
+cp conf.yaml.template conf.yaml   # 如存在模板
+```
 
+然后按下面"配置说明"修改。
 
-## ⭐️ What is this project?
+### 4. 启动后端
 
+```bash
+python main.py
+```
 
-**Open-LLM-VTuber** is a unique **voice-interactive AI companion** that not only supports **real-time voice conversations**  and **visual perception** but also features a lively **Live2D avatar**. All functionalities can run completely offline on your computer!
+服务默认监听 `0.0.0.0:12393`（见 `conf.yaml` 的 `system_config`）。
 
-You can treat it as your personal AI companion — whether you want a `virtual girlfriend`, `boyfriend`, `cute pet`, or any other character, it can meet your expectations. The project fully supports `Windows`, `macOS`, and `Linux`, and offers two usage modes: web version and desktop client (with special support for **transparent background desktop pet mode**, allowing the AI companion to accompany you anywhere on your screen).
+### 5. 启动前端
 
-Although the long-term memory feature is temporarily removed (coming back soon), thanks to the persistent storage of chat logs, you can always continue your previous unfinished conversations without losing any precious interactive moments.
+前端为独立子模块（`frontend/`）。开发模式：
 
-In terms of backend support, we have integrated a rich variety of LLM inference, text-to-speech, and speech recognition solutions. If you want to customize your AI companion, you can refer to the [Character Customization Guide](https://open-llm-vtuber.github.io/docs/user-guide/live2d) to customize your AI companion's appearance and persona.
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-The reason it's called `Open-LLM-Vtuber` instead of `Open-LLM-Companion` or `Open-LLM-Waifu` is because the project's initial development goal was to use open-source solutions that can run offline on platforms other than Windows to recreate the closed-source AI Vtuber `neuro-sama`.
+或直接使用已构建的静态资源，由后端提供。
 
-### 👀 Demo
-| ![](assets/i1.jpg) | ![](assets/i2.jpg) |
-|:---:|:---:|
-| ![](assets/i3.jpg) | ![](assets/i4.jpg) |
+浏览器访问前端地址即可开始对话。
 
+---
 
-## ✨ Features & Highlights
+## 三、conf.yaml 配置说明
 
-- 🖥️ **Cross-platform support**: Perfect compatibility with macOS, Linux, and Windows. We support NVIDIA and non-NVIDIA GPUs, with options to run on CPU or use cloud APIs for resource-intensive tasks. Some components support GPU acceleration on macOS.
+### system_config
 
-- 🔒 **Offline mode support**: Run completely offline using local models - no internet required. Your conversations stay on your device, ensuring privacy and security.
+```yaml
+system_config:
+  host: 0.0.0.0      # 监听地址，0.0.0.0 表示允许局域网访问
+  port: 12393        # 后端端口
+```
 
-- 💻 **Attractive and powerful web and desktop clients**: Offers both web version and desktop client usage modes, supporting rich interactive features and personalization settings. The desktop client can switch freely between window mode and desktop pet mode, allowing the AI companion to be by your side at all times.
+### character_config（角色）
 
-- 🎯 **Advanced interaction features**:
-  - 👁️ Visual perception, supporting camera, screen recording and screenshots, allowing your AI companion to see you and your screen
-  - 🎤 Voice interruption without headphones (AI won't hear its own voice)
-  - 🫱 Touch feedback, interact with your AI companion through clicks or drags
-  - 😊 Live2D expressions, set emotion mapping to control model expressions from the backend
-  - 🐱 Pet mode, supporting transparent background, global top-most, and mouse click-through - drag your AI companion anywhere on the screen
-  - 💭 Display AI's inner thoughts, allowing you to see AI's expressions, thoughts and actions without them being spoken
-  - 🗣️ AI proactive speaking feature
-  - 💾 Chat log persistence, switch to previous conversations anytime
-  - 🌍 TTS translation support (e.g., chat in Chinese while AI uses Japanese voice)
+```yaml
+character_config:
+  character_name: 艾丝妲        # 角色名
+  human_name: 開拓者            # 对用户的称呼
+  persona_prompt: |
+    ...                        # 角色人设提示词（日文）
+```
 
-- 🧠 **Extensive model support**:
-  - 🤖 Large Language Models (LLM): Ollama, OpenAI (and any OpenAI-compatible API), Gemini, Claude, Mistral, DeepSeek, Zhipu AI, GGUF, LM Studio, vLLM, etc.
-  - 🎙️ Automatic Speech Recognition (ASR): sherpa-onnx, FunASR, Faster-Whisper, Whisper.cpp, Whisper, Groq Whisper, Azure ASR, etc.
-  - 🔊 Text-to-Speech (TTS): sherpa-onnx, pyttsx3, MeloTTS, Coqui-TTS, GPTSoVITS, Bark, CosyVoice, Edge TTS, Fish Audio, Azure TTS, etc.
+- `persona_prompt` 决定 LLM 扮演的角色与说话风格。
+- 本项目强制角色只用日语回复（提示词开头有【最重要規則】段落）。
 
-- 🔧 **Highly customizable**:
-  - ⚙️ **Simple module configuration**: Switch various functional modules through simple configuration file modifications, without delving into the code
-  - 🎨 **Character customization**: Import custom Live2D models to give your AI companion a unique appearance. Shape your AI companion's persona by modifying the Prompt. Perform voice cloning to give your AI companion the voice you desire
-  - 🧩 **Flexible Agent implementation**: Inherit and implement the Agent interface to integrate any Agent architecture, such as HumeAI EVI, OpenAI Her, Mem0, etc.
-  - 🔌 **Good extensibility**: Modular design allows you to easily add your own LLM, ASR, TTS, and other module implementations, extending new features at any time
+### agent_config（LLM）
 
+```yaml
+agent_config:
+  conversation_agent_choice: basic_memory_agent
+  agent_settings:
+    basic_memory_agent:
+      llm_provider: deepseek_llm
+  llm_configs:
+    deepseek_llm:
+      llm_api_key: <你的 DeepSeek Key>
+      model: deepseek-chat
+      temperature: 0.7
+```
+
+### asr_config（语音识别）
+
+本项目使用 SiliconFlow ASR：
+
+```yaml
+asr_config:
+  asr_model: siliconflow_asr
+  siliconflow_asr:
+    api_key: <你的 SiliconFlow Key>
+    api_url: https://api.siliconflow.cn/v1/audio/transcriptions
+    model: FunAudioLLM/SenseVoiceSmall
+```
 
-## 👥 User Reviews
-> Thanks to the developer for open-sourcing and sharing the girlfriend for everyone to use
-> 
-> This girlfriend has been used over 100,000 times
+- 自动识别中 / 日 / 英。
 
+### tts_config（语音合成）
 
-## 🚀 Quick Start
+本项目使用本地 GPT-SoVITS：
 
-Please refer to the [Quick Start](https://open-llm-vtuber.github.io/docs/quick-start) section in our documentation for installation.
-
-
-
-## ☝ Update
-> :warning: `v1.0.0` has breaking changes and requires re-deployment. You *may* still update via the method below, but the `conf.yaml` file is incompatible and most of the dependencies needs to be reinstalled with `uv`. For those who came from versions before `v1.0.0`, I recommend deploy this project again with the [latest deployment guide](https://open-llm-vtuber.github.io/docs/quick-start).
-
-Please use `uv run update.py` to update if you installed any versions later than `v1.0.0`.
-
-## 😢 Uninstall  
-Most files, including Python dependencies and models, are stored in the project folder.
-
-However, models downloaded via ModelScope or Hugging Face may also be in `MODELSCOPE_CACHE` or `HF_HOME`. While we aim to keep them in the project's `models` directory, it's good to double-check.  
-
-Review the installation guide for any extra tools you no longer need, such as `uv`, `ffmpeg`, or `deeplx`.  
-
-## 🤗 Want to contribute?
-Checkout the [development guide](https://docs.llmvtuber.com/docs/development-guide/overview).
-
-
-# 🎉🎉🎉 Related Projects
-
-[ylxmf2005/LLM-Live2D-Desktop-Assitant](https://github.com/ylxmf2005/LLM-Live2D-Desktop-Assitant)
-- Your Live2D desktop assistant powered by LLM! Available for both Windows and MacOS, it senses your screen, retrieves clipboard content, and responds to voice commands with a unique voice. Featuring voice wake-up, singing capabilities, and full computer control for seamless interaction with your favorite character.
-
-
-
-
-
-
-## 📜 Third-Party Licenses
-
-### Live2D Sample Models Notice
-
-This project includes Live2D sample models provided by Live2D Inc. These assets are licensed separately under the Live2D Free Material License Agreement and the Terms of Use for Live2D Cubism Sample Data. They are not covered by the MIT license of this project.
-
-This content uses sample data owned and copyrighted by Live2D Inc. The sample data are utilized in accordance with the terms and conditions set by Live2D Inc. (See [Live2D Free Material License Agreement](https://www.live2d.jp/en/terms/live2d-free-material-license-agreement/) and [Terms of Use](https://www.live2d.com/eula/live2d-sample-model-terms_en.html)).
-
-Note: For commercial use, especially by medium or large-scale enterprises, the use of these Live2D sample models may be subject to additional licensing requirements. If you plan to use this project commercially, please ensure that you have the appropriate permissions from Live2D Inc., or use versions of the project without these models.
-
-
-## Contributors
-Thanks our contributors and maintainers for making this project possible.
-
-<a href="https://github.com/Open-LLM-VTuber/Open-LLM-VTuber/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Open-LLM-VTuber/Open-LLM-VTuber" />
-</a>
-
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Open-LLM-VTuber/open-llm-vtuber&type=Date)](https://star-history.com/#Open-LLM-VTuber/open-llm-vtuber&Date)
-
-
-
-
-
+```yaml
+tts_config:
+  tts_model: gpt_sovits_tts
+  gpt_sovits_tts:
+    api_url: http://127.0.0.1:9880/tts
+    text_lang: ja                       # 输入文本语言（不是参考音频语言）
+    ref_audio_path: D:/GPT-SoVITS/custom_models/v2ProPlus/aista/ref_audio/happy.wav
+    prompt_lang: ja
+    prompt_text: ふふ、私の部下たちは優秀でしょう？   # 必须与参考音频内容一致
+    text_split_method: cut5
+    batch_size: '1'
+    media_type: wav
+    streaming_mode: 'false'
+```
+
+**关键坑：**
+- `ref_audio_path` 不能含中文，需复制到纯英文路径。
+- `prompt_text` 必须和参考音频实际说的内容一致，否则音色偏。
+- `text_lang` 指输入文本语言，当前为 `ja`。
+
+---
+
+## 四、GPT-SoVITS 本地 TTS 部署
+
+### 1. 安装位置
+
+`D:\GPT-SoVITS`，版本 v2 Pro Plus，CPU 模式。
+
+### 2. 模型配置
+
+编辑 `D:\GPT-SoVITS\GPT_SoVITS\configs\tts_infer.yaml`，**只改 `custom` 段**（代码只读 `custom` 键）：
+
+```yaml
+custom:
+  bert_base_path: GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large
+  cnhuhbert_base_path: GPT_SoVITS/pretrained_models/chinese-hubert-base
+  device: cpu
+  is_half: false
+  t2s_weights_path: "custom_models/v2ProPlus/艾丝妲/艾丝妲-e10.ckpt"
+  version: v2ProPlus
+  vits_weights_path: "custom_models/v2ProPlus/艾丝妲/艾丝_e10_s150.pth"
+```
+
+### 3. 启动 API
+
+```bash
+cd /d/GPT-SoVITS
+PYTHONUTF8=1 .venv/Scripts/python.exe api_v2.py -a 127.0.0.1 -p 9880 -c GPT_SoVITS/configs/tts_infer.yaml
+```
+
+- `PYTHONUTF8=1` 必须设置，否则中文路径报 cp932 编码错误。
+- 启动后 API 地址：`http://127.0.0.1:9880/tts`。
+- 改完 yaml 必须重启才生效。
+
+### 4. 切换声音模型步骤
+
+1. 把 `.ckpt` + `.pth` 放到 `custom_models/v2ProPlus/模型名/`
+2. 参考音频复制到纯英文路径，如 `custom_models/v2ProPlus/aista/ref_audio/happy.wav`
+3. 改 `tts_infer.yaml` 的 `custom` 段两个权重路径
+4. 改 `conf.yaml` 的 `character_name`、`persona_prompt`、`ref_audio_path`、`prompt_text`
+5. 重启 GPT-SoVITS API
+
+### 5. 已打的关键补丁（GPT-SoVITS 侧）
+
+1. `torchaudio/__init__.py`：`load()` / `save()` 改为用 soundfile（绕过 torchcodec 的 FFmpeg 依赖）
+2. `fast_langdetect`：把 `lid.176.ftz` 从 `.venv/.../fast_langdetect/resources/` 复制到 `GPT_SoVITS/pretrained_models/fast_langdetect/`
+3. venv 需安装 `onnxruntime`（G2PW 中文多音字模型需要）
+4. `G2PWModel` 目录若嵌套两层（`G2PWModel/G2PWModel/`），把内容上移一层
+
+---
+
+## 五、Git 工作流（toreca-vtuber）
+
+本仓库历史已重写为干净的个人历史：
+
+```
+<你的修改提交>
+chore: import Open-LLM-VTuber upstream base (v1.x)
+```
+
+- `origin` = 你自己的仓库 `https://github.com/Amonn-1/toreca-vtuber.git`（日常提交推送走这里）
+- `upstream` = 原开源项目（仅用于参考，历史已不相关，合并会冲突）
+
+日常操作：
+
+```bash
+git add <文件>
+git commit -m "..."
+git push origin main
+```
+
+---
+
+## 六、常见问题排查
+
+| 现象 | 原因 / 解决 |
+|---|---|
+| TTS 报 400 / 无声音 | GPT-SoVITS API 未启动；或缺 onnxruntime / G2PWModel 目录嵌套 |
+| 中文路径报错 cp932 | 启动 GPT-SoVITS 时未设 `PYTHONUTF8=1` |
+| 日语被念成中文 | `conf.yaml` 的 `text_lang` 设错，应为 `ja` |
+| LLM 用中文回复 | persona_prompt 的日语强制规则不够强，补【最重要規則】段 |
+| 端口 9880 / 12393 被占用 | 用 `powershell Stop-Process -Id <PID> -Force` 释放 |
+| 本地 LLM 503 | 已内置修复：localhost 连接自动设 `NO_PROXY` |
+| WebSocket 断连崩溃 | 已内置修复：统一走 `safe_websocket_send` |
+
+---
+
+## 七、启动顺序总结
+
+1. 启动 GPT-SoVITS API（端口 9880）
+2. 启动 Open-LLM-VTuber 后端（`python main.py`，端口 12393）
+3. 启动 / 打开前端
+4. 浏览器访问前端地址开始对话

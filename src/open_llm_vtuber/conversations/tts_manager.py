@@ -95,12 +95,30 @@ class TTSTaskManager:
         Runs continuously until all payloads are processed.
         """
         buffered_payloads: Dict[int, Dict] = {}
+        generating_signal_sent = False
 
         while True:
             try:
+                # Check if queue is empty but more tasks are pending
+                if self._payload_queue.empty() and not generating_signal_sent:
+                    # Check if there are still pending TTS tasks
+                    pending_tasks = [t for t in self.task_list if not t.done()]
+                    if pending_tasks:
+                        # Send signal to frontend to show "generating speech" indicator
+                        await safe_websocket_send(
+                            websocket_send,
+                            json.dumps({"type": "full-text", "text": "thinking..."})
+                        )
+                        generating_signal_sent = True
+                        logger.debug("Sent tts-generating signal to frontend")
+
                 # Get payload from queue
                 payload, sequence_number = await self._payload_queue.get()
                 buffered_payloads[sequence_number] = payload
+
+                # Reset generating signal when we receive new payload
+                if generating_signal_sent:
+                    generating_signal_sent = False
 
                 # Send payloads in order
                 while self._next_sequence_to_send in buffered_payloads:

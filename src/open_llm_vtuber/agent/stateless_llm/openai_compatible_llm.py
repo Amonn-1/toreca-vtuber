@@ -4,6 +4,7 @@ endpoints for language generation.
 """
 
 import os
+import httpx
 from typing import AsyncIterator, List, Dict, Any
 from openai import (
     AsyncStream,
@@ -20,6 +21,13 @@ from loguru import logger
 
 from .stateless_llm_interface import StatelessLLMInterface
 from ...mcpp.types import ToolCallObject
+
+
+class _StripAuthTransport(httpx.AsyncHTTPTransport):
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if "authorization" in request.headers:
+            del request.headers["authorization"]
+        return await super().handle_async_request(request)
 
 
 class AsyncLLM(StatelessLLMInterface):
@@ -51,11 +59,23 @@ class AsyncLLM(StatelessLLMInterface):
         if "localhost" in base_url or "127.0.0.1" in base_url:
             os.environ["NO_PROXY"] = "localhost,127.0.0.1"
 
+        # Disable SSL verification for localhost HTTPS connections (dev certificates)
+        skip_ssl_verify = base_url.startswith("https://") and ("localhost" in base_url or "127.0.0.1" in base_url)
+
+        http_client = httpx.AsyncClient(
+            transport=_StripAuthTransport(verify=not skip_ssl_verify),
+            trust_env=False,
+        )
+
         self.client = AsyncOpenAI(
             base_url=base_url,
             organization=organization_id,
             project=project_id,
-            api_key=llm_api_key,
+            api_key="not-needed",
+            http_client=http_client,
+            default_headers={
+                "X-Internal-Token": llm_api_key,
+            },
         )
         self.support_tools = True
 

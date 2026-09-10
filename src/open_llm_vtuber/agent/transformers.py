@@ -139,7 +139,10 @@ def display_processor():
                             elif tag.state == TagState.END:
                                 text = ")"
 
-                    display = DisplayText(text=text)  # Simplified DisplayText creation
+                    if sentence.is_paragraph_start:
+                        text = "\n\n" + text
+
+                    display = DisplayText(text=text)
                     yield sentence, display, actions  # Yield the tuple
                 elif isinstance(item, dict):
                     # Pass through dictionaries
