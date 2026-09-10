@@ -68,9 +68,8 @@ async def process_single_conversation(
             metadata=metadata,
         )
 
-        # Store user message (check if we should skip storing to history)
-        skip_history = metadata and metadata.get("skip_history", False)
-        if context.history_uid and not skip_history:
+        # Store user message
+        if context.history_uid:
             store_message(
                 conf_uid=context.character_config.conf_uid,
                 history_uid=context.history_uid,
@@ -78,9 +77,6 @@ async def process_single_conversation(
                 content=input_text,
                 name=context.character_config.human_name,
             )
-
-        if skip_history:
-            logger.debug("Skipping storing user input to history (proactive speak)")
 
         logger.info(f"User input: {input_text}")
         if images:

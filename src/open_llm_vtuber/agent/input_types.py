@@ -82,10 +82,7 @@ class BatchInput(BaseInput):
         texts: List of text data from different sources
         images: Optional list of images
         files: Optional list of files
-        metadata: Optional dictionary of metadata flags for special inputs
-            - 'proactive_speak': Boolean flag indicating if this is a proactive speak input
-            - 'skip_memory': Boolean flag indicating if this input should be skipped in AI's internal memory
-            - 'skip_history': Boolean flag indicating if this input should be skipped in local history storage
+        metadata: Optional dictionary of metadata flags
     """
 
     texts: List[TextData]
