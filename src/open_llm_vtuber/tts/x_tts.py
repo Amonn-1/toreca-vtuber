@@ -27,7 +27,7 @@ class TTSEngine(TTSInterface):
         }
 
         # Send POST request to the TTS API
-        response = requests.post(self.api_url, json=data, timeout=120)
+        response = requests.post(self.api_url, json=data, timeout=300)
 
         # Check if the request was successful
         if response.status_code == 200:

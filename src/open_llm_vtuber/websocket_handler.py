@@ -174,8 +174,7 @@ class WebSocketHandler:
         # Send initial group status
         await self.send_group_update(websocket, client_uid)
 
-        # Start microphone
-        await websocket.send_text(json.dumps({"type": "control", "text": "start-mic"}))
+        # Note: Microphone is not auto-started. User must click the voice detection button to enable it.
 
     async def _play_welcome_greeting(
         self, websocket: WebSocket, client_uid: str
