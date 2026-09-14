@@ -1,0 +1,14 @@
+/* Kiosk overlay: keep Live2D + original mic/interrupt buttons only. */
+.cs-main-container,
+.cs-chat-container,
+.cs-message-list,
+.cs-message-input,
+.cs-conversation-list,
+textarea,
+[aria-label="Attach file"] {
+  display: none !important;
+}
+
+html.vtuber-widget img[alt="background"] {
+  display: none !important;
+}

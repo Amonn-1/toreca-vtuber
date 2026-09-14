@@ -8,6 +8,8 @@
       var params = new URLSearchParams(location.search);
       if (params.get('mode') !== 'widget') return;
 
+      document.documentElement.classList.add('vtuber-widget');
+
       var parentOrigin = '*';
       var micState = 'off';
       var initialStartMicPassed = false;
@@ -85,8 +87,14 @@
                   }
                 }
                 if (data.type === 'set-model-and-conf' && data.model_info) {
-                  window.__live2dYShift = data.model_info.initialYshift || 0;
-                  window.__live2dModelYOffset = data.model_info.initialYshift || 0;
+                  // Widget iframe is short. Enlarge the model and shift it
+                  // down so the face sits in the center and legs clip below.
+                  var scale = Number(data.model_info.kScale) || 0.45;
+                  data.model_info.kScale = Math.min(2.45, scale * 5);
+                  data.model_info.initialYshift = 0;
+                  window.__live2dYShift = -1.32;
+                  window.__live2dModelYOffset = -1.32;
+                  event = { data: JSON.stringify(data) };
                   window.dispatchEvent(new Event('resize'));
                 }
               } catch(e) {}
@@ -131,6 +139,7 @@
     </script>
     <script type="module" crossorigin src="./assets/main-BediIVAD.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/main-QEkl09-0.css">
+    <link rel="stylesheet" href="./kiosk.css">
   </head>
 
   <body>
