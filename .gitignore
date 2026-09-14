@@ -7,7 +7,7 @@ conf.yaml
 
 # ignore non-default live2d models
 /live2d-models/*
-!/live2d-models/mao_pro
+!/live2d-models/hoshino_ruri_v2
 !/live2d-models/shizuku
 
 # ignore non-default character configs

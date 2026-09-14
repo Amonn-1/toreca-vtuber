@@ -1,0 +1,60 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "hoshino_ruri_v2.moc3",
+		"Textures": [
+			"hoshino_ruri_v2.4096/texture_00.png"
+		],
+		"Physics": "hoshino_ruri_v2.physics3.json",
+		"DisplayInfo": "hoshino_ruri_v2.cdi3.json",
+		"Expressions": [
+			{"Name": "exp_01", "File": "exp_01.exp3.json"},
+			{"Name": "exp_02", "File": "exp_02.exp3.json"},
+			{"Name": "exp_03", "File": "exp_03.exp3.json"},
+			{"Name": "exp_04", "File": "exp_04.exp3.json"},
+			{"Name": "exp_05", "File": "exp_05.exp3.json"},
+			{"Name": "exp_06", "File": "exp_06.exp3.json"},
+			{"Name": "exp_07", "File": "exp_07.exp3.json"},
+			{"Name": "exp_08", "File": "exp_08.exp3.json"}
+		],
+		"Motions": {
+			"Idle": [
+				{
+					"File": "hoshino_ruri_v2.idle.motion3.json"
+				}
+			],
+			"Blink": [
+				{
+					"File": "hoshino_ruri_v2.blink.motion3.json"
+				}
+			],
+			"Nod": [
+				{
+					"File": "hoshino_ruri_v2.nod.motion3.json"
+				}
+			],
+			"Shake": [
+				{
+					"File": "hoshino_ruri_v2.shake.motion3.json"
+				}
+			]
+		}
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": [
+				"ParamEyeLOpen",
+				"ParamEyeROpen"
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": [
+				"ParamMouthOpenY"
+			]
+		}
+	]
+}

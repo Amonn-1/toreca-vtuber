@@ -5,7 +5,7 @@
         "url": "/live2d-models/hoshino_ruri_v2/hoshino_ruri_v2.model3.json",
         "kScale": 0.45,
         "initialXshift": 0,
-        "initialYshift": 200,
+        "initialYshift": -0.6,
         "kXOffset": 1150,
         "idleMotionGroupName": "Idle",
         "emotionMap": {
