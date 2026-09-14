@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Open-LLM-Vtuber</title>
+    <script>
+    (function() {
+      var params = new URLSearchParams(location.search);
+      if (params.get('mode') !== 'widget') return;
+
+      var parentOrigin = '*';
+      var micState = 'off';
+      var initialStartMicPassed = false;
+      var pendingAutoStop = false;
+      var autoStopTimer = null;
+      var autoStopAttempts = 0;
+
+      function findMicButton() {
+        return document.querySelector('button[aria-label="Toggle microphone"]');
+      }
+
+      function isMicButtonOn(btn) {
+        var bg = window.getComputedStyle(btn).backgroundColor;
+        return bg.indexOf('56') !== -1 && bg.indexOf('161') !== -1 && bg.indexOf('105') !== -1;
+      }
+
+      function tryAutoStopMic() {
+        if (!pendingAutoStop) return;
+        autoStopAttempts++;
+        if (autoStopAttempts > 50) {
+          pendingAutoStop = false;
+          return;
+        }
+        var btn = findMicButton();
+        if (btn && isMicButtonOn(btn)) {
+          btn.click();
+          micState = 'off';
+          pendingAutoStop = false;
+          parent.postMessage({ type: 'vtuber:mic-stopped' }, parentOrigin);
+          return;
+        }
+        autoStopTimer = setTimeout(tryAutoStopMic, 100);
+      }
+
+      function startAutoStop() {
+        pendingAutoStop = true;
+        autoStopAttempts = 0;
+        if (autoStopTimer) clearTimeout(autoStopTimer);
+        autoStopTimer = setTimeout(tryAutoStopMic, 100);
+      }
+
+      var origDesc = Object.getOwnPropertyDescriptor(WebSocket.prototype, 'onmessage');
+      if (origDesc && origDesc.set) {
+        Object.defineProperty(WebSocket.prototype, 'onmessage', {
+          configurable: true,
+          enumerable: true,
+          get: origDesc.get,
+          set: function(fn) {
+            var self = this;
+            var wrappedFn = function(event) {
+              try {
+                var data = JSON.parse(event.data);
+                if (data.type === 'control') {
+                  if (data.text === 'start-mic') {
+                    if (!initialStartMicPassed) {
+                      initialStartMicPassed = true;
+                      micState = 'on';
+                      startAutoStop();
+                      return fn.call(self, event);
+                    }
+                    micState = 'on';
+                    startAutoStop();
+                    return;
+                  }
+                  if (data.text === 'stop-mic') {
+                    micState = 'off';
+                    return fn.call(self, event);
+                  }
+                  if (data.text === 'conversation-chain-start') {
+                    parent.postMessage({ type: 'vtuber:ai-speaking' }, parentOrigin);
+                  }
+                  if (data.text === 'conversation-chain-end') {
+                    parent.postMessage({ type: 'vtuber:ai-idle' }, parentOrigin);
+                    startAutoStop();
+                  }
+                }
+                if (data.type === 'set-model-and-conf' && data.model_info) {
+                  window.__live2dYShift = data.model_info.initialYshift || 0;
+                  window.__live2dModelYOffset = data.model_info.initialYshift || 0;
+                  window.dispatchEvent(new Event('resize'));
+                }
+              } catch(e) {}
+              return fn.call(self, event);
+            };
+            origDesc.set.call(self, wrappedFn);
+          }
+        });
+      }
+
+      window.__vtuberBridge = {
+        startMic: function() {
+          var btn = findMicButton();
+          if (btn && micState !== 'on') {
+            btn.click();
+            micState = 'on';
+            parent.postMessage({ type: 'vtuber:mic-started' }, parentOrigin);
+          }
+        },
+        stopMic: function() {
+          var btn = findMicButton();
+          if (btn && micState !== 'off') {
+            btn.click();
+            micState = 'off';
+            parent.postMessage({ type: 'vtuber:mic-stopped' }, parentOrigin);
+          }
+        }
+      };
+
+      window.addEventListener('message', function(event) {
+        var data = event.data;
+        if (!data || typeof data.type !== 'string') return;
+        if (data.type === 'faq:mic-on') {
+          window.__vtuberBridge.startMic();
+        } else if (data.type === 'faq:mic-off') {
+          window.__vtuberBridge.stopMic();
+        }
+      });
+
+      parent.postMessage({ type: 'vtuber:ready' }, parentOrigin);
+    })();
+    </script>
+    <script type="module" crossorigin src="./assets/main-BediIVAD.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/main-QEkl09-0.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
