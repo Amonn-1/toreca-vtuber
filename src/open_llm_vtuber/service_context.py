@@ -457,6 +457,10 @@ class ServiceContext:
                 prompt_content = prompt_content.replace(
                     "[<insert_emomap_keys>]", self.live2d_model.emo_str
                 )
+                prompt_content = prompt_content.replace(
+                    "[<insert_action_keys>]",
+                    self.live2d_model.action_str or "(none)",
+                )
 
             if prompt_name == "mcp_prompt":
                 continue

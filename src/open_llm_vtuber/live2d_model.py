@@ -17,6 +17,8 @@ class Live2dModel:
         model_info (dict): The information of the Live2D model.
         emo_map (dict): The emotion map of the Live2D model.
         emo_str (str): The string representation of the emotion map of the Live2D model.
+        action_map (dict): Maps motion tags such as ``nod`` to Live2D motion group names.
+        action_str (str): The string representation of the action map of the Live2D model.
     """
 
     model_dict_path: str
@@ -24,6 +26,8 @@ class Live2dModel:
     model_info: dict
     emo_map: dict
     emo_str: str
+    action_map: dict
+    action_str: str
 
     def __init__(
         self, live2d_model_name: str, model_dict_path: str = "model_dict.json"
@@ -34,7 +38,7 @@ class Live2dModel:
 
     def set_model(self, model_name: str) -> None:
         """
-        Set the model with its name and load the model information. This method will initialize the `self.model_info`, `self.emo_map`, and `self.emo_str` attributes.
+        Set the model with its name and load the model information. This method will initialize the `self.model_info`, `self.emo_map`, `self.emo_str`, `self.action_map`, and `self.action_str` attributes.
         This method is called in the constructor.
 
         Parameters:
@@ -51,6 +55,10 @@ class Live2dModel:
         self.emo_str: str = " ".join([f"[{key}]," for key in self.emo_map.keys()])
         # emo_str is a string of the keys in the emoMap dictionary. The keys are enclosed in square brackets.
         # example: `"[fear], [anger], [disgust], [sadness], [joy], [neutral], [surprise]"`
+        self.action_map: dict = {
+            k.lower(): v for k, v in self.model_info.get("actionMap", {}).items()
+        }
+        self.action_str: str = " ".join([f"[{key}]," for key in self.action_map.keys()])
 
     def _load_file_content(self, file_path: str) -> str:
         """Load the content of a file with robust encoding handling."""
@@ -171,21 +179,58 @@ class Live2dModel:
             i += 1
         return expression_list
 
-    def remove_emotion_keywords(self, target_str: str) -> str:
-        """
-        Remove the emotion keywords from the input string and return the cleaned string.
+    def extract_motion(self, str_to_check: str) -> list[str]:
+        """Extract Live2D motion group names from bracket tags in the text.
 
-        Parameters:
-            str_to_check (str): The string to check for emotions.
+        Tags such as ``[nod]`` and ``[shake]`` are matched against ``actionMap``.
+        Values are the motion group names defined in the model's ``.model3.json``.
+
+        Args:
+            str_to_check (str): The LLM response text that may contain motion tags.
 
         Returns:
-            str: The cleaned string with the emotion keywords removed.
+            list[str]: Motion group names in the order they appear. Empty if none match.
+        """
+        motion_list: list[str] = []
+        if not self.action_map:
+            return motion_list
+
+        text = str_to_check.lower()
+        keys = sorted(self.action_map.keys(), key=len, reverse=True)
+        i = 0
+        while i < len(text):
+            if text[i] != "[":
+                i += 1
+                continue
+            matched = False
+            for key in keys:
+                tag = f"[{key}]"
+                if text[i : i + len(tag)] == tag:
+                    motion_list.append(self.action_map[key])
+                    i += len(tag)
+                    matched = True
+                    break
+            if not matched:
+                i += 1
+        return motion_list
+
+    def remove_emotion_keywords(self, target_str: str) -> str:
+        """
+        Remove Live2D emotion and motion keywords from the input string.
+
+        Parameters:
+            target_str (str): The string that may contain ``[joy]``, ``[nod]``, etc.
+
+        Returns:
+            str: The cleaned string with those keywords removed.
         """
 
         lower_str = target_str.lower()
+        keys = list(self.emo_map.keys()) + list(self.action_map.keys())
+        keys.sort(key=len, reverse=True)
 
-        for key in self.emo_map.keys():
-            lower_key = f"[{key}]".lower()
+        for key in keys:
+            lower_key = f"[{key}]"
             while lower_key in lower_str:
                 start_index = lower_str.find(lower_key)
                 end_index = start_index + len(lower_key)

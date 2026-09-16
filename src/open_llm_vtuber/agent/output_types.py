@@ -5,9 +5,17 @@ from abc import ABC, abstractmethod
 
 @dataclass
 class Actions:
-    """Represents actions that can be performed alongside text output"""
+    """Represents actions that can be performed alongside text output.
+
+    Attributes:
+        expressions: Live2D expression indices or names.
+        motions: Live2D motion group names such as ``Nod`` or ``Shake``.
+        pictures: Optional picture identifiers.
+        sounds: Optional sound identifiers.
+    """
 
     expressions: Optional[List[str] | List[int]] = None
+    motions: Optional[List[str]] = None
     pictures: Optional[List[str]] = None
     sounds: Optional[List[str]] = None
 
@@ -51,7 +59,7 @@ class SentenceOutput(BaseOutput):
     Attributes:
         display_text: Text to be displayed in UI
         tts_text: Text to be sent to TTS engine
-        actions: Associated actions (expressions, pictures, sounds)
+        actions: Associated actions (expressions, motions, pictures, sounds)
     """
 
     display_text: DisplayText  # Changed from str to DisplayText

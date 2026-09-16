@@ -18,7 +18,11 @@
             "sadness": 1,
             "surprise": 3
         },
-        "tapMotions": {}
+        "tapMotions": {},
+        "actionMap": {
+            "nod": "Nod",
+            "shake": "Shake"
+        }
     },
     {
         "name": "shizuku-local",

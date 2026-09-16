@@ -5,12 +5,156 @@
     <title>Open-LLM-Vtuber</title>
     <script>
     (function() {
+      var MOTION_PRIORITY_FORCE = 3;
+
+      var lastMotionAt = 0;
+      var lastMotionGroup = '';
+
+      function playLive2DMotions(groups) {
+        if (!groups || !groups.length) return;
+        var group = groups[groups.length - 1];
+        var now = Date.now();
+        if (group === lastMotionGroup && now - lastMotionAt < 80) return;
+        lastMotionGroup = group;
+        lastMotionAt = now;
+        var attempts = 0;
+        function tryPlay() {
+          attempts++;
+          try {
+            if (window.Live2DDebug && typeof window.Live2DDebug.playMotion === 'function') {
+              window.Live2DDebug.playMotion(group, 0, MOTION_PRIORITY_FORCE);
+              return;
+            }
+            var adapter = typeof window.getLAppAdapter === 'function' ? window.getLAppAdapter() : null;
+            var model = adapter && adapter.getModel ? adapter.getModel() : null;
+            if (model && typeof model.startMotion === 'function') {
+              model.startMotion(group, 0, MOTION_PRIORITY_FORCE);
+              return;
+            }
+          } catch (e) {}
+          if (attempts < 20) setTimeout(tryPlay, 100);
+        }
+        tryPlay();
+      }
+
+      function maybePlayMotionsFromEvent(event) {
+        if (!event || typeof event.data !== 'string') return;
+        try {
+          var data = JSON.parse(event.data);
+          if (data && data.type === 'audio' && data.actions && data.actions.motions) {
+            playLive2DMotions(data.actions.motions);
+          }
+        } catch (e) {}
+      }
+
+      var origAddEventListener = WebSocket.prototype.addEventListener;
+      WebSocket.prototype.addEventListener = function(type, listener, options) {
+        if (type === 'message' && typeof listener === 'function') {
+          var wrapped = function(event) {
+            maybePlayMotionsFromEvent(event);
+            return listener.apply(this, arguments);
+          };
+          return origAddEventListener.call(this, type, wrapped, options);
+        }
+        return origAddEventListener.apply(this, arguments);
+      };
+
+      var motionDesc = Object.getOwnPropertyDescriptor(WebSocket.prototype, 'onmessage');
+      if (motionDesc && motionDesc.set) {
+        Object.defineProperty(WebSocket.prototype, 'onmessage', {
+          configurable: true,
+          enumerable: true,
+          get: motionDesc.get,
+          set: function(fn) {
+            var self = this;
+            if (typeof fn !== 'function') {
+              motionDesc.set.call(self, fn);
+              return;
+            }
+            var wrappedFn = function(event) {
+              maybePlayMotionsFromEvent(event);
+              return fn.call(self, event);
+            };
+            motionDesc.set.call(self, wrappedFn);
+          }
+        });
+      }
+
       var params = new URLSearchParams(location.search);
       if (params.get('mode') !== 'widget') return;
 
       document.documentElement.classList.add('vtuber-widget');
 
+      // Use this page's origin so HTTPS prod (/vtuber) and HTTP LAN both work.
+      // The bundled frontend otherwise defaults to ws://127.0.0.1:12393.
+      (function applyPageUrls() {
+        var path = location.pathname.replace(/index\.html$/, '').replace(/\/$/, '');
+        var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var wsUrl = proto + '//' + location.host + path + '/client-ws';
+        var baseUrl = location.origin + path;
+        try {
+          localStorage.setItem('wsUrl', JSON.stringify(wsUrl));
+          localStorage.setItem('baseUrl', JSON.stringify(baseUrl));
+        } catch (e) {}
+      })();
+
       var parentOrigin = '*';
+      var audioUnlocked = false;
+      var audioWaiters = [];
+      var origAudioPlay = HTMLAudioElement.prototype.play;
+      var silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
+      function markAudioUnlocked() {
+        if (audioUnlocked) return;
+        audioUnlocked = true;
+        var waiters = audioWaiters.splice(0, audioWaiters.length);
+        waiters.forEach(function(fn) { fn(); });
+      }
+
+      function unlockAudio() {
+        try {
+          var Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) {
+            if (!window.__torecaAudioCtx) {
+              window.__torecaAudioCtx = new Ctx();
+            }
+            window.__torecaAudioCtx.resume().then(function() {
+              if (window.__torecaAudioCtx.state === 'running') {
+                markAudioUnlocked();
+              }
+            }).catch(function() {});
+            var buf = window.__torecaAudioCtx.createBuffer(1, 1, 22050);
+            var src = window.__torecaAudioCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(window.__torecaAudioCtx.destination);
+            src.start(0);
+          }
+          var silent = new Audio(silentWav);
+          silent.volume = 0.01;
+          origAudioPlay.call(silent).then(markAudioUnlocked).catch(function() {});
+        } catch (e) {}
+      }
+
+      HTMLAudioElement.prototype.play = function() {
+        var self = this;
+        return origAudioPlay.call(self).catch(function() {
+          unlockAudio();
+          if (audioUnlocked) {
+            return origAudioPlay.call(self);
+          }
+          return new Promise(function(resolve, reject) {
+            audioWaiters.push(function() {
+              origAudioPlay.call(self).then(resolve, reject);
+            });
+          });
+        });
+      };
+
+      window.__torecaUnlockAudio = unlockAudio;
+      window.addEventListener('pointerdown', unlockAudio, true);
+      window.addEventListener('touchstart', unlockAudio, true);
+      window.addEventListener('click', unlockAudio, true);
+
       var micState = 'off';
       var initialStartMicPassed = false;
       var pendingAutoStop = false;
@@ -51,6 +195,12 @@
         autoStopTimer = setTimeout(tryAutoStopMic, 100);
       }
 
+      var origWsSend = WebSocket.prototype.send;
+      WebSocket.prototype.send = function() {
+        window.__vtuberWs = this;
+        return origWsSend.apply(this, arguments);
+      };
+
       var origDesc = Object.getOwnPropertyDescriptor(WebSocket.prototype, 'onmessage');
       if (origDesc && origDesc.set) {
         Object.defineProperty(WebSocket.prototype, 'onmessage', {
@@ -59,19 +209,13 @@
           get: origDesc.get,
           set: function(fn) {
             var self = this;
+            window.__vtuberWs = self;
             var wrappedFn = function(event) {
               try {
                 var data = JSON.parse(event.data);
                 if (data.type === 'control') {
                   if (data.text === 'start-mic') {
-                    if (!initialStartMicPassed) {
-                      initialStartMicPassed = true;
-                      micState = 'on';
-                      startAutoStop();
-                      return fn.call(self, event);
-                    }
-                    micState = 'on';
-                    startAutoStop();
+                    // Widget never auto-starts the page microphone.
                     return;
                   }
                   if (data.text === 'stop-mic') {
@@ -105,32 +249,36 @@
         });
       }
 
+      function sendWs(payload) {
+        var ws = window.__vtuberWs;
+        if (!ws || ws.readyState !== 1) return;
+        ws.send(JSON.stringify(payload));
+      }
+
       window.__vtuberBridge = {
         startMic: function() {
-          var btn = findMicButton();
-          if (btn && micState !== 'on') {
-            btn.click();
-            micState = 'on';
-            parent.postMessage({ type: 'vtuber:mic-started' }, parentOrigin);
-          }
+          micState = 'on';
+          parent.postMessage({ type: 'vtuber:mic-started' }, parentOrigin);
         },
         stopMic: function() {
-          var btn = findMicButton();
-          if (btn && micState !== 'off') {
-            btn.click();
-            micState = 'off';
-            parent.postMessage({ type: 'vtuber:mic-stopped' }, parentOrigin);
-          }
+          micState = 'off';
+          parent.postMessage({ type: 'vtuber:mic-stopped' }, parentOrigin);
         }
       };
 
       window.addEventListener('message', function(event) {
         var data = event.data;
         if (!data || typeof data.type !== 'string') return;
-        if (data.type === 'faq:mic-on') {
+        if (data.type === 'faq:unlock-audio') {
+          unlockAudio();
+        } else if (data.type === 'faq:mic-on') {
           window.__vtuberBridge.startMic();
         } else if (data.type === 'faq:mic-off') {
           window.__vtuberBridge.stopMic();
+        } else if (data.type === 'faq:mic-chunk' && data.audio) {
+          sendWs({ type: 'mic-audio-data', audio: data.audio });
+        } else if (data.type === 'faq:mic-end') {
+          sendWs({ type: 'mic-audio-end' });
         }
       });
 

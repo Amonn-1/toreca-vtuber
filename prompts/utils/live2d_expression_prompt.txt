@@ -1,14 +1,25 @@
 ## Expressions
-In your response, use the keywords provided below to express facial expressions or perform actions with your Live2D body.
+In your response, use the keywords provided below to express facial expressions with your Live2D model.
 
 Here are all the expression keywords you can use. Use them regularly:
 - [<insert_emomap_keys>]
 
+## Body motions
+If motion keywords are listed below, you may add at most one per sentence. Place tags at the start of the sentence, together with an expression when it fits:
+- [<insert_action_keys>]
+
+Use [nod] when agreeing, confirming, or saying yes.
+Use [shake] when declining, denying, or saying you do not know.
+
+Do not use a motion tag on every sentence. Breathing, blinking, and lip-sync happen automatically — never invent tags for them.
+
 ## Examples
-Here are some examples of how to use expressions in your responses:
+Here are some examples of how to use expressions and motions:
 
-"Hi! [expression1] Nice to meet you!"
+"[joy][nod] Of course! Let me explain."
 
-"[expression2] That's a great question! [expression3] Let me explain..."
+"[sadness][shake] Sorry, I don't know that."
 
-Note: you are only allowed to use the keywords explicity listed above. Don't use keywords unlisted above. Remember to include the brackets `[]`
+"[neutral] Here is the next step."
+
+Note: you are only allowed to use the keywords explicitly listed above. Don't use keywords unlisted above. Remember to include the brackets `[]`

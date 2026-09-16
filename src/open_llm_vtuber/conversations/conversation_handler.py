@@ -20,7 +20,6 @@ from .conversation_utils import (
 from .tts_manager import TTSTaskManager
 from .types import GroupConversationState
 from ..agent.output_types import Actions, DisplayText, SentenceOutput
-from prompts import prompt_loader
 
 WELCOME_GREETING_JA = (
     "こんにちは。シャニートレカのAIアシスタントです。"
@@ -213,11 +212,16 @@ async def handle_welcome_greeting(
             json.dumps({"type": "control", "text": "conversation-chain-start"})
         )
 
-        expressions = context.live2d_model.extract_emotion("[joy]")
+        greeting_tags = "[joy][nod]"
+        expressions = context.live2d_model.extract_emotion(greeting_tags)
+        motions = context.live2d_model.extract_motion(greeting_tags)
         output = SentenceOutput(
             display_text=DisplayText(text=WELCOME_GREETING_JA),
             tts_text=WELCOME_GREETING_JA,
-            actions=Actions(expressions=expressions or None),
+            actions=Actions(
+                expressions=expressions or None,
+                motions=motions or None,
+            ),
         )
         await process_agent_output(
             output=output,

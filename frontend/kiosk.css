@@ -12,3 +12,8 @@ textarea,
 html.vtuber-widget img[alt="background"] {
   display: none !important;
 }
+
+html.vtuber-widget button[aria-label="Toggle microphone"],
+html.vtuber-widget button[aria-label="Interrupt"] {
+  display: none !important;
+}
