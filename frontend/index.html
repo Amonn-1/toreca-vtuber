@@ -6,6 +6,65 @@
     <script>
     (function() {
       var MOTION_PRIORITY_FORCE = 3;
+      var pendingGroup = null;
+      var retryTimer = null;
+      var retryCount = 0;
+
+      function getLive2DModel() {
+        try {
+          var adapter = typeof window.getLAppAdapter === 'function' ? window.getLAppAdapter() : null;
+          return adapter && adapter.getModel ? adapter.getModel() : null;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function cubismName(id) {
+        if (id == null) return '';
+        if (typeof id === 'string') return id;
+        if (typeof id.s === 'string') return id.s;
+        if (typeof id.id === 'string') return id.id;
+        if (typeof id.getString === 'function') return String(id.getString());
+        return String(id);
+      }
+
+      function hasLoadedMotion(model, group, index) {
+        var want = group + '_' + index;
+        var map = model && model._motions;
+        if (!map || !map._keyValues) return false;
+        var size = map._size || 0;
+        var i;
+        for (i = 0; i < size; i++) {
+          var pair = map._keyValues[i];
+          if (pair && cubismName(pair.first) === want && pair.second) return true;
+        }
+        return false;
+      }
+
+      function scheduleMotionRetry() {
+        if (retryTimer) return;
+        retryTimer = setTimeout(function() {
+          retryTimer = null;
+          ensureHookAndPlay();
+        }, 200);
+      }
+
+      function ensureHookAndPlay() {
+        var model = getLive2DModel();
+        if (!pendingGroup) return;
+        if (!model || model._state !== 22 || typeof model.startMotion !== 'function') {
+          if (retryCount++ < 150) scheduleMotionRetry();
+          return;
+        }
+        var group = pendingGroup;
+        if (!hasLoadedMotion(model, group, 0)) {
+          if (retryCount++ < 150) scheduleMotionRetry();
+          return;
+        }
+        pendingGroup = null;
+        retryCount = 0;
+        model.startMotion(group, 0, MOTION_PRIORITY_FORCE);
+      }
 
       var lastMotionAt = 0;
       var lastMotionGroup = '';
@@ -14,33 +73,22 @@
         if (!groups || !groups.length) return;
         var group = groups[groups.length - 1];
         var now = Date.now();
-        if (group === lastMotionGroup && now - lastMotionAt < 80) return;
+        if (group === lastMotionGroup && now - lastMotionAt < 2500) return;
         lastMotionGroup = group;
         lastMotionAt = now;
-        var attempts = 0;
-        function tryPlay() {
-          attempts++;
-          try {
-            if (window.Live2DDebug && typeof window.Live2DDebug.playMotion === 'function') {
-              window.Live2DDebug.playMotion(group, 0, MOTION_PRIORITY_FORCE);
-              return;
-            }
-            var adapter = typeof window.getLAppAdapter === 'function' ? window.getLAppAdapter() : null;
-            var model = adapter && adapter.getModel ? adapter.getModel() : null;
-            if (model && typeof model.startMotion === 'function') {
-              model.startMotion(group, 0, MOTION_PRIORITY_FORCE);
-              return;
-            }
-          } catch (e) {}
-          if (attempts < 20) setTimeout(tryPlay, 100);
-        }
-        tryPlay();
+        pendingGroup = group;
+        retryCount = 0;
+        ensureHookAndPlay();
       }
 
       function maybePlayMotionsFromEvent(event) {
         if (!event || typeof event.data !== 'string') return;
         try {
           var data = JSON.parse(event.data);
+          if (data && data.type === 'play-motion' && data.group) {
+            playLive2DMotions([data.group]);
+            return;
+          }
           if (data && data.type === 'audio' && data.actions && data.actions.motions) {
             playLive2DMotions(data.actions.motions);
           }

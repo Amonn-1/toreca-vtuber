@@ -1,5 +1,32 @@
 [
     {
+        "name": "toreca_2d_04",
+        "description": "Toreca 2D 04",
+        "url": "/live2d-models/toreca_2d_04/toreka10087.model3.json",
+        "kScale": 0.45,
+        "initialXshift": 0,
+        "initialYshift": -0.6,
+        "kXOffset": 1150,
+        "idleMotionGroupName": "Idle",
+        "emotionMap": {
+            "neutral": 0,
+            "anger": 2,
+            "disgust": 2,
+            "fear": 1,
+            "joy": 3,
+            "smirk": 3,
+            "sadness": 1,
+            "surprise": 3
+        },
+        "tapMotions": {},
+        "actionMap": {
+            "nod": "Nod",
+            "shake": "Shake",
+            "wave": "Wave",
+            "wave_smile": "Wave"
+        }
+    },
+    {
         "name": "hoshino_ruri_v2",
         "description": "星野瑠璃 v2",
         "url": "/live2d-models/hoshino_ruri_v2/hoshino_ruri_v2.model3.json",

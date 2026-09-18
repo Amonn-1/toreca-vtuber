@@ -10,11 +10,14 @@ If motion keywords are listed below, you may add at most one per sentence. Place
 
 Use [nod] when agreeing, confirming, or saying yes.
 Use [shake] when declining, denying, or saying you do not know.
+Use [wave] or [wave_smile] when greeting or saying hello. Prefer [wave] for the opening greeting.
 
 Do not use a motion tag on every sentence. Breathing, blinking, and lip-sync happen automatically — never invent tags for them.
 
 ## Examples
 Here are some examples of how to use expressions and motions:
+
+"[joy][wave] Hello! Nice to meet you."
 
 "[joy][nod] Of course! Let me explain."
 

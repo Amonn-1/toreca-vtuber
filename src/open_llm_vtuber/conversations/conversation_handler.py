@@ -212,9 +212,12 @@ async def handle_welcome_greeting(
             json.dumps({"type": "control", "text": "conversation-chain-start"})
         )
 
-        greeting_tags = "[joy][nod]"
+        greeting_tags = "[joy][wave]"
         expressions = context.live2d_model.extract_emotion(greeting_tags)
         motions = context.live2d_model.extract_motion(greeting_tags)
+        logger.info(
+            f"Welcome greeting actions expressions={expressions} motions={motions}"
+        )
         output = SentenceOutput(
             display_text=DisplayText(text=WELCOME_GREETING_JA),
             tts_text=WELCOME_GREETING_JA,
